@@ -73,7 +73,77 @@ const UkeEngine = (function () {
     return { root, quality, bass, raw };
   }
 
-  return { parseChord, NOTE_PC, chordTones, essentialTones };
+  const STRINGS_PC = [7, 0, 4, 9]; // G C E A
+  const MAX_FRET = 12;
+
+  function scoreVoicing(frets, parsed, toneSet) {
+    const played = [];
+    frets.forEach((f, i) => { if (f >= 0) played.push((STRINGS_PC[i] + f) % 12); });
+    const fretted = frets.filter((f) => f > 0);
+    const muted = frets.filter((f) => f === -1).length;
+    const open = frets.filter((f) => f === 0).length;
+    const covered = new Set(played).size;
+    const span = fretted.length ? Math.max(...fretted) - Math.min(...fretted) : 0;
+    const high = fretted.length ? Math.max(...fretted) : 0;
+    let s = 0;
+    s += fretted.length * 1.0;     // 손가락 적을수록 좋음
+    s += span * 1.5;               // 손 벌림 작을수록 좋음
+    s += high * 0.6;               // 낮은 포지션 선호
+    s += muted * 3.0;              // 뮤트현 페널티(우쿨렐레는 4현 울림 선호)
+    s -= open * 0.7;               // 개방현 보너스
+    s -= covered * 1.2;            // 코드음 많이 담을수록 보너스
+    if (!played.includes(parsed.root)) s += 2.0; // 루트 포함 선호
+    return s;
+  }
+
+  function voicing(name) {
+    const parsed = parseChord(name);
+    if (OVERRIDE[name]) {
+      return finalize(OVERRIDE[name], parsed, name);
+    }
+    const toneSet = new Set(chordTones(parsed));
+    const essential = essentialTones(parsed);
+    let best = null, bestScore = Infinity;
+    for (let g = -1; g <= MAX_FRET; g++)
+    for (let c = -1; c <= MAX_FRET; c++)
+    for (let e = -1; e <= MAX_FRET; e++)
+    for (let a = -1; a <= MAX_FRET; a++) {
+      const frets = [g, c, e, a];
+      const played = [];
+      let ok = true;
+      frets.forEach((f, i) => {
+        if (f >= 0) {
+          const pc = (STRINGS_PC[i] + f) % 12;
+          if (!toneSet.has(pc)) ok = false;
+          played.push(pc);
+        }
+      });
+      if (!ok || played.length < 3) continue;
+      for (const ess of essential) if (!played.includes(ess)) { ok = false; break; }
+      if (!ok) continue;
+      const sc = scoreVoicing(frets, parsed, toneSet);
+      if (sc < bestScore) { bestScore = sc; best = frets; }
+    }
+    if (!best) best = [0, 0, 0, 0];
+    return finalize(best, parsed, name);
+  }
+
+  function difficultyOf(frets) {
+    const fretted = frets.filter((f) => f > 0);
+    const span = fretted.length ? Math.max(...fretted) - Math.min(...fretted) : 0;
+    const high = fretted.length ? Math.max(...fretted) : 0;
+    if (high >= 5 || span >= 4 || fretted.length >= 4) return "hard";
+    if (high >= 3 || fretted.length === 3) return "mid";
+    return "easy";
+  }
+
+  function finalize(frets, parsed, name) {
+    return { name, frets: frets.slice(), difficulty: difficultyOf(frets) };
+  }
+
+  const OVERRIDE = {}; // Task A4에서 채움
+
+  return { parseChord, NOTE_PC, chordTones, essentialTones, voicing };
 })();
 
 if (typeof window !== "undefined") window.UkeEngine = UkeEngine;

@@ -46,3 +46,26 @@ test("essentialTones: m7b5는 단3도 (Bm7b5)", () => {
   // B=11, D=2(단3도), A=9(단7도)
   assert.deepEqual(UkeEngine.essentialTones(UkeEngine.parseChord("Bm7b5")).sort((a,b)=>a-b), [2,9,11]);
 });
+
+const OPEN = [7,0,4,9]; // GCEA
+function playedPcs(frets) {
+  const out = [];
+  frets.forEach((f,i)=>{ if (f>=0) out.push((OPEN[i]+f)%12); });
+  return [...new Set(out)];
+}
+test("voicing: 결과 음이 구성음의 부분집합 + 핵심음 포함 (Dmaj7)", () => {
+  const p = UkeEngine.parseChord("Dmaj7");
+  const v = UkeEngine.voicing("Dmaj7");
+  const tones = new Set(UkeEngine.chordTones(p));
+  assert.equal(v.frets.length, 4);
+  for (const pc of playedPcs(v.frets)) assert.ok(tones.has(pc), `${pc} not a chord tone`);
+  for (const ess of UkeEngine.essentialTones(p)) assert.ok(playedPcs(v.frets).includes(ess), `essential ${ess} missing`);
+});
+test("voicing: frets는 -1..12 정수 4개", () => {
+  const v = UkeEngine.voicing("F#m7b5");
+  assert.equal(v.frets.length, 4);
+  for (const f of v.frets) assert.ok(Number.isInteger(f) && f >= -1 && f <= 12);
+});
+test("voicing: difficulty 등급 존재", () => {
+  assert.ok(["easy","mid","hard"].includes(UkeEngine.voicing("C").difficulty));
+});
