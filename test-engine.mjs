@@ -33,3 +33,16 @@ test("essentialTones: 7화음은 루트·3도·7도", () => {
   const p = UkeEngine.parseChord("G7");
   assert.deepEqual(UkeEngine.essentialTones(p).sort((a,b)=>a-b), [5,7,11]); // G, B, F
 });
+test("essentialTones: 메이저는 장3도 (C)", () => {
+  assert.deepEqual(UkeEngine.essentialTones(UkeEngine.parseChord("C")).sort((a,b)=>a-b), [0,4]);
+});
+test("essentialTones: maj7은 장3도 + 장7도 (Cmaj7)", () => {
+  assert.deepEqual(UkeEngine.essentialTones(UkeEngine.parseChord("Cmaj7")).sort((a,b)=>a-b), [0,4,11]);
+});
+test("essentialTones: 마이너는 단3도 (Am)", () => {
+  assert.deepEqual(UkeEngine.essentialTones(UkeEngine.parseChord("Am")).sort((a,b)=>a-b), [0,9]); // A=9, C=0
+});
+test("essentialTones: m7b5는 단3도 (Bm7b5)", () => {
+  // B=11, D=2(단3도), A=9(단7도)
+  assert.deepEqual(UkeEngine.essentialTones(UkeEngine.parseChord("Bm7b5")).sort((a,b)=>a-b), [2,9,11]);
+});

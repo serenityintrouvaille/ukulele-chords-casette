@@ -22,7 +22,9 @@ const UkeEngine = (function () {
   function essentialTones(parsed) {
     const r = parsed.root, q = parsed.quality;
     const out = [r];
-    const third = q.startsWith("m") || q === "dim" || q === "dim7" || q === "m7b5"
+    const isMinorThird =
+      (q[0] === "m" && q[1] !== "a") || q === "dim" || q === "dim7"; // m, m6, m7, m9, m7b5, dim(7) — NOT maj*
+    const third = isMinorThird
       ? (r + 3) % 12
       : q === "sus2" ? (r + 2) % 12
       : q === "sus4" ? (r + 5) % 12
