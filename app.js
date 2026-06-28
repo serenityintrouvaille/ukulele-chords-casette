@@ -224,9 +224,14 @@
     }
     if (e.code === "TIMEOUT") { toast("응답이 너무 오래 걸려 중단했어요. 다시 시도해 주세요"); return; }
     if (e.code === "NETWORK") { toast("연결 실패 (네트워크/CORS). 콘솔을 확인해 주세요"); return; }
+    // 크레딧/결제 문제는 모델·설정 문제로 오해되지 않게 명확히 안내
+    if (/credit balance|billing|too low|insufficient|quota/i.test(e.message || "")) {
+      toast("Anthropic API 크레딧이 부족해요. console.anthropic.com → Plans & Billing 에서 충전 후 다시 시도해 주세요", 6000);
+      return;
+    }
     if (e.status === 401) { toast("API 키가 올바르지 않아요. 설정을 확인해 주세요"); return; }
     if (e.status === 429) { toast("요청이 많아요. 잠시 후 다시 시도해 주세요"); return; }
-    if (e.status === 400) { toast("요청 오류: " + (e.message || "") + " (모델/설정 확인)"); return; }
+    if (e.status === 400) { toast("요청 오류: " + (e.message || "알 수 없음"), 5000); return; }
     if (/fetch|Load failed|NetworkError/i.test(e.message || "")) { toast("네트워크 오류예요. 연결을 확인해 주세요"); return; }
     toast("오류: " + (e.message || "알 수 없는 오류"));
   }
