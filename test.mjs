@@ -8,6 +8,7 @@
  * 브라우저 앱(app.js)과 동일한 프롬프트를 사용한다.
  */
 import { readFileSync } from "node:fs";
+import UkeEngine from "./chord-engine.js";
 
 // ---------- .env.local 로드 (의존성 없이 직접 파싱) ----------
 function loadEnvLocal() {
@@ -108,21 +109,22 @@ async function identifySong(artist, title) {
 
 async function generateChords(artist, title) {
   const system =
-    "너는 숙련된 우쿨렐레 연주자이자 편곡자다. 가수·곡명은 확정된 곡이다. 목표는 실제 코드 악보를 찾아 전사하는 것이며, 못 찾으면 정직하게 추정으로 표시한다.\n" +
+    "너는 숙련된 우쿨렐레 편곡자다. 코드 '이름'과 가사 배치, 구간별 스트로크만 만든다. 운지(프렛)는 절대 만들지 마라(앱이 계산).\n" +
+    "코드는 악기 무관이다 — 우쿨렐레 악보가 없어도 기타/피아노 코드 자료를 그대로 쓴다.\n" +
     "[알고리즘]\n" +
-    "STEP 1 (검색) web_search로 '[가수] [곡명] 코드'/'chords'/'기타 코드 가사' — 코드가 가사와 함께 실린 페이지 URL을 찾는다(스니펫만으로 단정 금지).\n" +
-    "STEP 2 (열람) 후보 URL을 web_fetch로 직접 열어 본문에서 코드가 가사에 정렬된 실제 차트를 확인한다(코드사이트·tistory/naver 블로그·Ultimate Guitar 등).\n" +
-    "STEP 3 (전사) 실제 차트의 코드 진행·정렬을 그대로 옮긴다. 각 코드를 해당 음절 '앞'에 [코드]로(단어 중간 가능, 줄 맨 앞에 몰지 말 것). 모든 변화 보존.\n" +
-    "STEP 4 (출처 3단계, 정직): transcribed=가사정렬된 실제 차트의 코드+배치 그대로 / chords_verified=실제 코드는 확인했으나(예: Chordify 코드나열) 가사 배치는 추정 / derived=코드까지 이론 추정. 등급 부풀리기 금지.\n" +
-    "[화성 리듬·배치추정] 코드는 한 마디(4박)마다 바뀜. 한 줄 3~5개 일반적. 반복 루프를 마디 단위로 가사에 얹는다.\n" +
-    "[규칙] 코드명 기타=우쿨렐레 동일(운지만 GCEA)·key/capo 원본대로.\n" +
-    "[형식] 구간 분할, 각 줄 인라인 대괄호. 코드 운지 frets [G,C,E,A] 0=개방 -1=뮤트. source 정직, sourceUrl 포함.\n" +
-    "특정 못 하면 {\"notFound\": true}. [엄수] 설명·머리말·펜스 금지. 첫 문자 '{' 마지막 '}'. JSON 객체 하나만. 형식:\n" +
-    '{"title":"","artist":"","key":"조","capo":0,"source":"transcribed|chords_verified|derived","sourceUrl":"",' +
-    '"chords":[{"name":"C","frets":[0,0,0,3]}],' +
-    '"sections":[{"label":"Verse 1","lines":["[C]가사 한 줄","..."]}]}\n' +
-    "가사가 비는 줄은 빈 문자열.";
-  const user = `확정된 곡 — 가수: ${artist} / 곡명: ${title}\nweb_search로 코드 페이지를 찾고 web_fetch로 직접 열어 실제 코드 확인. 가사정렬 차트면 transcribed, 코드만 있으면 chords_verified, 못 찾으면 derived. 설명 없이 JSON만.`;
+    "STEP 1 web_search로 '[가수] [곡명] 코드/chords' 검색 → 코드가 가사와 실린 페이지 URL을 찾는다.\n" +
+    "STEP 2 web_fetch로 후보 페이지를 직접 열어 실제 코드 진행·정렬을 확인한다.\n" +
+    "STEP 3 자료가 있으면 전사한다. 자료가 전혀 없으면(인디·신곡 등) 원키 기준으로 직접 편곡한다.\n" +
+    "STEP 4 (출처, 정직): transcribed=실제 차트의 코드+가사정렬 전사 / chords_verified=코드는 실제 확인, 가사배치는 추정 / arranged=자료 없어 원키로 직접 편곡. 등급 부풀리기 금지.\n" +
+    "[우쿨렐레 적합] 원키 유지. 흔한 키(C·G·F·D·A) 코드 선호. 코드명만 적고 운지는 적지 마라.\n" +
+    "[스트로크] 각 구간에 대표 스트럼 1개. 4/4면 8분음표 8칸을 D(다운)/U(업)/-(쉼)/x(뮤트)로. 예: 'D - D U - U D U'. Verse는 단순, Chorus는 리듬감 있게.\n" +
+    "[배치] 코드는 한 마디(4박)마다 바뀜이 일반적. 가사 음절 '앞'에 [코드](줄 맨 앞에 몰지 말 것). 인트로는 코드 진행만.\n" +
+    "[출력 규칙] 설명·펜스 금지. 첫 문자 '{' 마지막 '}'. JSON 하나만:\n" +
+    '{"title":"","artist":"","album":"","key":"C major","relativeKey":"A minor","capo":0,"bpm":0,"timeSignature":"4/4",' +
+    '"source":"transcribed|chords_verified|arranged","sourceUrl":"","intro":["C","G","Am","F"],"chordsUsed":["C","G","Am","F"],' +
+    '"sections":[{"label":"Verse 1","strum":"D - D U - U D U","lines":["[C]가사 한 줄","..."]}]}\n' +
+    "곡을 특정 못 하면 {\"notFound\":true} 만.";
+  const user = `확정된 곡 — 가수: ${artist} / 곡명: ${title}\n자료가 있으면 전사(transcribed/chords_verified), 없으면 원키로 직접 편곡(arranged). 운지는 만들지 말고 코드 이름만. 설명 없이 JSON만.`;
   return parseJson(await callClaude(system, user, { maxTokens: 8000, useSearch: true, effort: "high", maxUses: 4 }));
 }
 
@@ -149,10 +151,6 @@ function renderLineToConsole(line) {
   return (chordLine.trimEnd() ? chordLine.trimEnd() + "\n" : "") + lyricLine;
 }
 
-function chordShape(frets) {
-  if (!Array.isArray(frets)) return "";
-  return "G C E A = " + frets.map((f) => (f === -1 ? "x" : f)).join(" ");
-}
 
 // ---------- 실행 ----------
 const artist = process.argv[2] || "아이유";
@@ -182,17 +180,21 @@ try {
   if (keybits.length) console.log("  " + keybits.join(" · "));
   const srcLabel = data.source === "transcribed" ? "✅ 실제 악보 전사(코드·배치)"
     : data.source === "chords_verified" ? "🟡 코드는 실제 확인 · 배치는 추정"
-    : "⚠️ AI 추정 (코드·배치 모두)";
+    : "🎨 직접 편곡(원키 기준)";
   console.log("  출처: " + srcLabel + (data.sourceUrl ? " " + data.sourceUrl : ""));
   console.log("═".repeat(48));
 
-  if (Array.isArray(data.chords) && data.chords.length) {
+  if (Array.isArray(data.chordsUsed) && data.chordsUsed.length) {
     console.log("\n[ 사용된 코드 ]");
-    data.chords.forEach((c) => console.log(`  ${(c.name || "").padEnd(6)} ${chordShape(c.frets)}`));
+    data.chordsUsed.forEach((name) => {
+      const v = UkeEngine.voicing(name);
+      console.log(`  ${name.padEnd(6)} G C E A = ${v.frets.map((f) => (f === -1 ? "x" : f)).join(" ")}`);
+    });
   }
 
   (data.sections || []).forEach((sec) => {
     console.log("\n— " + (sec.label || "") + " —");
+    if (sec.strum) console.log("  스트럼: " + sec.strum);
     (sec.lines || []).forEach((l) => {
       if (!l || !l.trim()) { console.log(""); return; }
       console.log(renderLineToConsole(l));
