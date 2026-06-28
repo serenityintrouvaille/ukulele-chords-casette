@@ -30,6 +30,7 @@
       </form>
 
       <button class="scrapbook-entry" id="openScrapbook">📔 스크랩북 — 저장한 플레이리스트</button>
+      <button class="scrapbook-entry" id="openProfile">❤️ My Profile — 좋아요한 곡 · 아티스트</button>
 
       <div class="list-section" id="favSection" hidden>
         <h2>⭐ 즐겨찾기</h2>
@@ -103,6 +104,13 @@
         <button class="primary-btn" id="saveSettings">저장</button>
         <p class="hint">API 키는 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> 에서 발급할 수 있어요.</p>
       </div>
+    </section>
+
+    <!-- My Profile -->
+    <section class="screen" id="screen-profile">
+      <div id="storyStrip" class="story-strip"></div>
+      <h2 class="section-h">My Playlist ❤️</h2>
+      <ul id="profileLikes" class="song-list"></ul>
     </section>
   </main>
 

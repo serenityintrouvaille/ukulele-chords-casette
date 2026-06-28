@@ -33,6 +33,7 @@
     scrapbook: $("screen-scrapbook"),
     playlist: $("screen-playlist"),
     settings: $("screen-settings"),
+    profile: $("screen-profile"),
   };
   const navBack = $("navBack");
   const navSettings = $("navSettings");
@@ -85,6 +86,7 @@
       scrapbook: "스크랩북 📔",
       playlist: "플레이리스트",
       settings: "설정",
+      profile: "My Profile",
     };
     topTitle.textContent = titles[name] || "우쿨렐레 코드 🎵";
     window.scrollTo(0, 0);
@@ -754,6 +756,49 @@
   });
 
   $("openScrapbook").addEventListener("click", () => { renderScrapbook(); showScreen("scrapbook"); });
+  $("openProfile").addEventListener("click", () => { renderProfile(); showScreen("profile"); });
+
+  function renderProfile() {
+    // 좋아요(favorites)를 My Playlist로
+    const likes = load(LS.favorites, []);
+    const ul = $("profileLikes"); ul.innerHTML = "";
+    if (!likes.length) {
+      const li = document.createElement("li"); li.className = "empty-note";
+      li.textContent = "악보 화면의 ⭐를 누르면 여기에 모여요.";
+      ul.appendChild(li);
+    } else {
+      likes.forEach((s) => ul.appendChild(makeSongItem(s, { fav: true })));
+    }
+    renderStories(likes);
+  }
+
+  // 좋아하는 아티스트 → 인스타 스토리식 원형 썸네일(정적 큐레이션, iTunes)
+  function renderStories(likes) {
+    const strip = $("storyStrip"); strip.innerHTML = "";
+    const artists = [...new Set(likes.map((s) => s.artist).filter(Boolean))].slice(0, 12);
+    artists.forEach((artist) => {
+      const bubble = document.createElement("button"); bubble.className = "story-bubble";
+      const ring = document.createElement("span"); ring.className = "story-ring";
+      const name = document.createElement("span"); name.className = "story-name"; name.textContent = artist;
+      bubble.append(ring, name);
+      bubble.onclick = () => openStory(artist);
+      strip.appendChild(bubble);
+      if (window.UkeITunes) {
+        UkeITunes.artistAlbums(artist, 1).then((al) => {
+          if (al[0] && al[0].artworkUrl) ring.style.backgroundImage = `url(${al[0].artworkUrl})`;
+        });
+      }
+    });
+  }
+
+  async function openStory(artist) {
+    const albums = window.UkeITunes ? await UkeITunes.artistAlbums(artist, 5) : [];
+    if (!albums.length) { toast(artist + "의 소식을 불러오지 못했어요"); return; }
+    const lines = albums.map((a) => `${a.album}${a.year ? " (" + a.year + ")" : ""}`).join("\n");
+    showOverlay(`${artist} 최근 앨범\n\n${lines}`);
+    setTimeout(hideOverlay, 3500);
+  }
+
   $("newPlaylistForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const name = $("newPlaylistName").value.trim();
