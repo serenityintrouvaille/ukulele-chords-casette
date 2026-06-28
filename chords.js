@@ -1,8 +1,8 @@
 /* 우쿨렐레 코드 다이어그램 SVG 렌더러
  * frets: [G, C, E, A] 순서의 프렛 번호 배열.
  *   0  = 개방현, -1 = 뮤트(연주 안 함), 1+ = 해당 프렛.
- * 곡에 쓰인 코드의 운지는 AI가 생성해서 넘겨주므로
- * 여기서는 그리기만 한다(코드 DB 불필요).
+ * 운지는 chord-engine.js(window.UkeEngine)가 결정론으로 계산하고
+ * 여기서는 그리기만 한다.
  */
 window.UkeChord = (function () {
   function validFrets(f) {
