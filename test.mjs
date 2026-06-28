@@ -98,33 +98,38 @@ function parseJson(text) {
 // ---------- 프롬프트 (app.js와 동일) ----------
 async function identifySong(artist, title) {
   const system =
-    "너는 음악 검색 도우미다. 사용자가 입력한 가수/곡명(오타·약칭·한글영어 혼용 가능)으로 실제 곡을 특정한다. " +
-    "반드시 web_search 도구로 실제 존재 여부를 확인하라. 인디·마이너 곡일수록 검색으로 확인하는 것이 중요하다. " +
-    "검색으로 곡을 확인하면 found=true 와 함께 검색으로 확인된 정확한 표기를 채운다. " +
-    "검색해도 곡을 특정할 수 없으면 found=false. 절대 없는 곡을 지어내지 마라. " +
-    '최종 출력은 JSON 한 개뿐(설명·코드펜스 금지): {"found": boolean, "title": "정확한 곡명", "artist": "정확한 가수명", "year": "발매연도 또는 빈 문자열", "note": "앨범 등 짧은 참고(선택)"}';
-  const user = `가수: ${artist || "(미입력)"}\n곡명: ${title || "(미입력)"}\n이 곡을 빠르게 특정해줘.`;
-  return parseJson(await callClaude(system, user, { maxTokens: 700, useSearch: true, effort: "low", maxUses: 1 }));
+    "너는 음악 검색 도우미다. 입력한 가수/곡명으로 '실제로 존재하는' 곡 1개를 web_search로 확인한다.\n" +
+    "[가장 중요] 네 기억·추측으로 곡 정보를 지어내지 마라. 오직 web_search 결과에 근거해서만 판단한다.\n" +
+    "[규칙]\n" +
+    "- web_search로 검색하고, 그 곡이 '실제로' 존재하는지(공식 음원/스트리밍/멜론·벅스·지니·가사 DB 등) 검색 결과로 확인한다.\n" +
+    "- 검색 결과가 그 곡의 존재를 '명확히' 보여줄 때만 found=true. 비슷한 다른 곡으로 대체하지 마라.\n" +
+    "- year·album은 검색 결과에서 확인된 값만. 확인 안 되면 빈 문자열. 추측한 연도·앨범·러닝타임을 지어내지 마라.\n" +
+    "- sourceUrl: 곡 존재를 확인한 실제 페이지 URL. 없으면 found=false 여야 한다.\n" +
+    "- 조금이라도 불확실하면 found=false.\n" +
+    '최종 출력은 JSON 한 개뿐(설명·코드펜스 금지): {"found": boolean, "title": "", "artist": "", "year": "", "album": "", "sourceUrl": "", "note": ""}';
+  const user = `가수: ${artist || "(미입력)"}\n곡명: ${title || "(미입력)"}\nweb_search로 이 곡이 실제 존재하는지 확인하고, 확인된 정보만 채워줘. 못 찾으면 found=false.`;
+  return parseJson(await callClaude(system, user, { maxTokens: 900, useSearch: true, effort: "medium", maxUses: 3 }));
 }
 
 async function generateChords(artist, title) {
   const system =
-    "너는 숙련된 우쿨렐레 편곡자다. 코드 '이름'과 가사 배치, 구간별 스트로크만 만든다. 운지(프렛)는 절대 만들지 마라(앱이 계산).\n" +
-    "코드는 악기 무관이다 — 우쿨렐레 악보가 없어도 기타/피아노 코드 자료를 그대로 쓴다.\n" +
+    "너는 우쿨렐레 편곡자다.\n" +
+    "[가장 중요 — 절대 규칙] 곡·가사·메타데이터를 절대 지어내지 마라. 모든 가사는 web_fetch로 '직접 연 실제 페이지'에서 그대로 가져와야 한다. 네 기억으로 가사를 한 줄이라도 쓰는 것은 금지. 실제 가사를 못 구하면 notFound로 답하라.\n" +
     "[알고리즘]\n" +
-    "STEP 1 web_search로 '[가수] [곡명] 코드/chords' 검색 → 코드가 가사와 실린 페이지 URL을 찾는다.\n" +
-    "STEP 2 web_fetch로 후보 페이지를 직접 열어 실제 코드 진행·정렬을 확인한다.\n" +
-    "STEP 3 자료가 있으면 전사한다. 자료가 전혀 없으면(인디·신곡 등) 원키 기준으로 직접 편곡한다.\n" +
-    "STEP 4 (출처, 정직): transcribed=실제 차트의 코드+가사정렬 전사 / chords_verified=코드는 실제 확인, 가사배치는 추정 / arranged=자료 없어 원키로 직접 편곡. 등급 부풀리기 금지.\n" +
+    "STEP 1 web_search로 '[가수] [곡명] 가사', '[가수] [곡명] 코드/chords'를 검색해 실제 가사/코드가 실린 페이지 URL을 찾는다.\n" +
+    "STEP 2 web_fetch로 그 페이지를 '직접 열어' 본문의 실제 가사를 읽는다. 가사는 반드시 이 fetch한 본문에서만 가져온다.\n" +
+    "STEP 3 코드: (a) 코드가 가사에 정렬된 실제 차트면 그대로 전사 (b) 코드 목록만 있으면 fetch한 실제 가사에 배치 (c) 코드 자료가 없으면 fetch한 '실제 가사' 위에 원키 화성으로 코드를 얹는다. 가사 자체는 항상 fetch한 실제 가사.\n" +
+    "STEP 4 (출처, 정직): transcribed=실제 코드차트 전사 / chords_verified=실제 코드+실제 가사, 배치 추정 / chords_derived=가사는 실제(fetch), 코드는 이론으로 얹음.\n" +
+    "[필수] lyricsSourceUrl=가사를 가져온 실제 페이지 URL. 실제 가사를 web_fetch로 확인 못 했으면 {\"notFound\":true} 만 출력.\n" +
     "[우쿨렐레 적합] 원키 유지. 흔한 키(C·G·F·D·A) 코드 선호. 코드명만 적고 운지는 적지 마라.\n" +
     "[스트로크] 각 구간에 대표 스트럼 1개. 4/4면 8분음표 8칸을 D(다운)/U(업)/-(쉼)/x(뮤트)로. 예: 'D - D U - U D U'. Verse는 단순, Chorus는 리듬감 있게.\n" +
     "[배치] 코드는 한 마디(4박)마다 바뀜이 일반적. 가사 음절 '앞'에 [코드](줄 맨 앞에 몰지 말 것). 인트로는 코드 진행만.\n" +
     "[출력 규칙] 설명·펜스 금지. 첫 문자 '{' 마지막 '}'. JSON 하나만:\n" +
     '{"title":"","artist":"","album":"","key":"C major","relativeKey":"A minor","capo":0,"bpm":0,"timeSignature":"4/4",' +
-    '"source":"transcribed|chords_verified|arranged","sourceUrl":"","intro":["C","G","Am","F"],"chordsUsed":["C","G","Am","F"],' +
+    '"source":"transcribed|chords_verified|chords_derived","sourceUrl":"","lyricsSourceUrl":"","intro":["C","G","Am","F"],"chordsUsed":["C","G","Am","F"],' +
     '"sections":[{"label":"Verse 1","strum":"D - D U - U D U","lines":["[C]가사 한 줄","..."]}]}\n' +
-    "곡을 특정 못 하면 {\"notFound\":true} 만.";
-  const user = `확정된 곡 — 가수: ${artist} / 곡명: ${title}\n자료가 있으면 전사(transcribed/chords_verified), 없으면 원키로 직접 편곡(arranged). 운지는 만들지 말고 코드 이름만. 설명 없이 JSON만.`;
+    "실제 가사를 못 찾으면 {\"notFound\":true} 만.";
+  const user = `확정된 곡 — 가수: ${artist} / 곡명: ${title}\n반드시 web_fetch로 실제 가사가 실린 페이지를 열어 그 가사를 가져와라. 가사를 지어내지 말 것. 실제 가사를 못 찾으면 {"notFound":true}. 운지는 만들지 말고 코드 이름만. 설명 없이 JSON만.`;
   return parseJson(await callClaude(system, user, { maxTokens: 8000, useSearch: true, effort: "high", maxUses: 4 }));
 }
 
