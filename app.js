@@ -272,9 +272,10 @@
       '{"title":"","artist":"","album":"","key":"C major","relativeKey":"A minor","capo":0,"bpm":0,"timeSignature":"4/4",' +
       '"source":"transcribed|chords_verified|chords_derived","sourceUrl":"","lyricsSourceUrl":"","intro":["C","G","Am","F"],"chordsUsed":["C","G","Am","F"],' +
       '"sections":[{"label":"Verse 1","strum":"D - D U - U D U","lines":["[C]가사 한 줄","..."]}]}\n' +
+      "[lines 형식 — 엄수] sections[].lines 의 각 항목은 반드시 '문자열 하나'다. 객체나 배열로 만들지 마라. 코드는 가사 안에 [C]처럼 인라인으로 넣는다. 예: \"[G]생각을 [Em]멈추다 보면\". 코드 없는 줄은 가사만, 간주처럼 가사 없는 줄은 코드만(예: \"[C] [G]\") 또는 빈 문자열.\n" +
       "실제 가사를 못 찾으면 {\"notFound\":true} 만 출력.";
     const user = `확정된 곡 — 가수: ${artist} / 곡명: ${title}\n반드시 web_fetch로 실제 가사가 실린 페이지를 열어 그 가사를 가져와라. 가사를 지어내지 말 것. 실제 가사를 못 찾으면 {"notFound":true}. 운지는 만들지 말고 코드 이름만. 설명 없이 JSON만.`;
-    const text = await callClaude(system, user, { maxTokens: 8000, timeoutMs: 240000, useSearch: true, effort: q.effort, maxUses: q.maxUses });
+    const text = await callClaude(system, user, { maxTokens: 8000, timeoutMs: 240000, useSearch: true, effort: q.effort, maxUses: Math.max(q.maxUses, 4) });
     return parseJson(text);
   }
 
@@ -472,16 +473,34 @@
         st.textContent = strumToArrows(sec.strum);
         block.appendChild(st);
       }
-      (sec.lines || []).forEach((line) => block.appendChild(renderLyricLine(line)));
+      (sec.lines || []).forEach((line) => {
+        try { block.appendChild(renderLyricLine(normalizeLyricLine(line))); } catch (_) {}
+      });
       sheet.appendChild(block);
     });
     root.appendChild(sheet);
     applyFontSize(getFontSize());
   }
 
+  // 모델이 line을 문자열이 아닌 객체/배열로 줄 때도 "[코드]가사" 문자열로 정규화 (렌더가 깨지지 않게)
+  function normalizeLyricLine(line) {
+    if (typeof line === "string") return line;
+    if (line == null) return "";
+    if (Array.isArray(line)) return line.map(normalizeLyricLine).join("");
+    if (typeof line === "object") {
+      const rawChord = line.chord || line.chords || line.c || "";
+      const chord = Array.isArray(rawChord) ? rawChord.join("") : String(rawChord);
+      const text = line.text || line.lyric || line.lyrics || line.word || line.w || "";
+      const c = chord.replace(/^\[|\]$/g, "").trim();
+      return (c ? "[" + c + "]" : "") + String(text);
+    }
+    return String(line);
+  }
+
   // "[C]사랑[G]했던" → 코드가 글자 위에 얹힌 줄
   function renderLyricLine(line) {
     const el = document.createElement("div"); el.className = "lyric-line";
+    if (typeof line !== "string") line = normalizeLyricLine(line);
     if (!line || !line.trim()) { el.classList.add("empty"); return el; }
 
     const re = /\[([^\]]+)\]/g;
