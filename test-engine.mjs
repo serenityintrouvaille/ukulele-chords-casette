@@ -69,3 +69,14 @@ test("voicing: frets는 -1..12 정수 4개", () => {
 test("voicing: difficulty 등급 존재", () => {
   assert.ok(["easy","mid","hard"].includes(UkeEngine.voicing("C").difficulty));
 });
+test("override: 관습적 표준형 정확", () => {
+  assert.deepEqual(UkeEngine.voicing("C").frets,  [0,0,0,3]);
+  assert.deepEqual(UkeEngine.voicing("Am").frets, [2,0,0,0]);
+  assert.deepEqual(UkeEngine.voicing("F").frets,  [2,0,1,0]);
+  assert.deepEqual(UkeEngine.voicing("G").frets,  [0,2,3,2]);
+  assert.deepEqual(UkeEngine.voicing("D").frets,  [2,2,2,0]);
+  assert.deepEqual(UkeEngine.voicing("Em").frets, [0,4,3,2]);
+});
+test("diatonicChords: C key", () => {
+  assert.deepEqual(UkeEngine.diatonicChords("C"), ["C","Dm","Em","F","G","Am","Bdim"]);
+});

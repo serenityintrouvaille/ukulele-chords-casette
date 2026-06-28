@@ -76,6 +76,18 @@ const UkeEngine = (function () {
   const STRINGS_PC = [7, 0, 4, 9]; // G C E A
   const MAX_FRET = 12;
 
+  const OVERRIDE = {
+    "C":[0,0,0,3], "C7":[0,0,0,1], "Cmaj7":[0,0,0,2], "Cm":[0,3,3,3], "Cm7":[3,3,3,3],
+    "D":[2,2,2,0], "D7":[2,2,2,3], "Dm":[2,2,1,0], "Dm7":[2,2,1,3],
+    "E":[4,4,4,2], "E7":[1,2,0,2], "Em":[0,4,3,2], "Em7":[0,2,0,2],
+    "F":[2,0,1,0], "F7":[2,3,1,3], "Fm":[1,0,1,3], "Fm7":[1,3,1,3], "Fmaj7":[2,4,1,3],
+    "G":[0,2,3,2], "G7":[0,2,1,2], "Gm":[0,2,3,1], "Gmaj7":[0,2,2,2],
+    "A":[2,1,0,0], "A7":[0,1,0,0], "Am":[2,0,0,0], "Am7":[0,0,0,0], "Amaj7":[1,1,0,0],
+    "B":[4,3,2,2], "B7":[2,3,2,2], "Bm":[4,2,2,2], "Bm7":[2,2,2,2],
+    "Bb":[3,2,1,1], "Bbm":[3,1,1,1], "Bb7":[1,2,1,1],
+    "Eb":[0,3,3,1], "Ab":[5,3,4,3],
+  };
+
   function scoreVoicing(frets, parsed) {
     const played = [];
     frets.forEach((f, i) => { if (f >= 0) played.push((STRINGS_PC[i] + f) % 12); });
@@ -141,9 +153,22 @@ const UkeEngine = (function () {
     return { name, frets: frets.slice(), difficulty: difficultyOf(frets) };
   }
 
-  const OVERRIDE = {}; // Task A4에서 채움
+  // 키의 다이어토닉 7개 코드(메이저 스케일). key는 "C" 또는 "C major" 형태.
+  const SCALE_STEPS = [2,2,1,2,2,2,1];
+  const PC_NAME = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
+  const TRIAD_SUFFIX = ["", "m", "m", "", "", "m", "dim"];
+  function diatonicChords(key) {
+    const root = (key || "C").trim().match(/^([A-G][#b]?)/);
+    let pc = root ? NOTE_PC[root[1]] : 0;
+    const out = [];
+    for (let i = 0; i < 7; i++) {
+      out.push(PC_NAME[pc % 12] + TRIAD_SUFFIX[i]);
+      pc += SCALE_STEPS[i];
+    }
+    return out;
+  }
 
-  return { parseChord, NOTE_PC, chordTones, essentialTones, voicing };
+  return { parseChord, NOTE_PC, chordTones, essentialTones, voicing, diatonicChords };
 })();
 
 if (typeof window !== "undefined") window.UkeEngine = UkeEngine;
