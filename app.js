@@ -352,7 +352,10 @@
     meta.append(rt, ra);
     const keybits = [];
     if (data.key) keybits.push(data.key);
+    if (data.relativeKey) keybits.push(data.relativeKey);
     if (data.capo && Number(data.capo) > 0) keybits.push("카포 " + data.capo);
+    if (data.bpm && Number(data.bpm) > 0) keybits.push(data.bpm + " BPM");
+    if (data.timeSignature) keybits.push(data.timeSignature);
     if (keybits.length) {
       const rk = document.createElement("div"); rk.className = "r-key"; rk.textContent = keybits.join(" · ");
       meta.appendChild(rk);
@@ -381,21 +384,21 @@
     } else if (data.source === "chords_verified") {
       badge.className += "src-partial";
       badge.textContent = "🟡 코드는 실제 확인 · 가사 배치는 추정 — 코드 자체는 맞지만 어느 가사에 얹히는지는 추정이라 어긋날 수 있어요";
-    } else {
+    } else { // arranged
       badge.className += "src-derived";
-      badge.textContent = "⚠️ AI 추정 — 실제 악보를 못 찾아 코드·배치 모두 이론으로 추정했어요. 정확하지 않을 수 있어요";
+      badge.textContent = "🎨 직접 편곡 — 웹에 악보가 없어 원키 기준으로 우쿨렐레용으로 편곡했어요. 참고용이에요";
     }
-    if (data.sourceUrl && data.source !== "derived") {
+    if (data.sourceUrl && data.source !== "arranged") {
       const a = document.createElement("a"); a.href = data.sourceUrl; a.target = "_blank"; a.rel = "noopener";
       a.textContent = " (출처)"; badge.appendChild(a);
     }
     root.appendChild(badge);
 
-    // 코드 운지표 스트립
-    if (Array.isArray(data.chords) && data.chords.length) {
+    // 코드 운지표 스트립 — chordsUsed(이름 배열) → 엔진이 운지 계산
+    if (Array.isArray(data.chordsUsed) && data.chordsUsed.length) {
       const strip = document.createElement("div"); strip.className = "chord-strip";
-      data.chords.forEach((c) => {
-        if (c && c.name) strip.appendChild(window.UkeChord.render(c.name, c.frets));
+      data.chordsUsed.forEach((name) => {
+        if (name) strip.appendChild(window.UkeChord.render(name));
       });
       root.appendChild(strip);
     }
@@ -411,11 +414,24 @@
 
     // 악보 본문
     const sheet = document.createElement("div"); sheet.className = "sheet";
+
+    // 인트로 코드 진행(한 줄)
+    if (Array.isArray(data.intro) && data.intro.length) {
+      const intro = document.createElement("div"); intro.className = "intro-line";
+      intro.textContent = "Intro  " + data.intro.join("  ");
+      sheet.appendChild(intro);
+    }
+
     (data.sections || []).forEach((sec) => {
       const block = document.createElement("div"); block.className = "section-block";
       if (sec.label) {
         const lab = document.createElement("div"); lab.className = "section-label"; lab.textContent = sec.label;
         block.appendChild(lab);
+      }
+      if (sec.strum) {
+        const st = document.createElement("div"); st.className = "strum-line";
+        st.textContent = strumToArrows(sec.strum);
+        block.appendChild(st);
       }
       (sec.lines || []).forEach((line) => block.appendChild(renderLyricLine(line)));
       sheet.appendChild(block);
@@ -453,6 +469,12 @@
       el.appendChild(chunk);
     });
     return el;
+  }
+
+  // "D - D U" → "↓ · ↓ ↑" (x=뮤트 ✕). 토큰은 공백 구분.
+  function strumToArrows(s) {
+    const map = { D: "↓", U: "↑", "-": "·", X: "✕", x: "✕" };
+    return String(s).trim().split(/\s+/).map((t) => map[t] || t).join(" ");
   }
 
   // ---------- 기록 / 즐겨찾기 ----------
