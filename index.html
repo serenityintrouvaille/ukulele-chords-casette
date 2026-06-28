@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#3b2f2f" />
+  <title>우쿨렐레 코드 찾기 🎵</title>
+  <link rel="stylesheet" href="style.css?v=3" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn" id="navBack" hidden aria-label="뒤로">‹</button>
+    <h1 id="topTitle">우쿨렐레 코드 🎵</h1>
+    <button class="icon-btn" id="navSettings" aria-label="설정">⚙</button>
+  </header>
+
+  <main id="main">
+    <!-- 검색 화면 -->
+    <section class="screen active" id="screen-search">
+      <form id="searchForm" class="search-box">
+        <label class="field">
+          <span>가수 이름</span>
+          <input type="text" id="artistInput" placeholder="예: 아이유" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>곡 이름</span>
+          <input type="text" id="titleInput" placeholder="예: 밤편지" autocomplete="off" />
+        </label>
+        <button type="submit" class="primary-btn" id="searchBtn">코드 찾기</button>
+      </form>
+
+      <button class="scrapbook-entry" id="openScrapbook">📔 스크랩북 — 저장한 플레이리스트</button>
+
+      <div class="list-section" id="favSection" hidden>
+        <h2>⭐ 즐겨찾기</h2>
+        <ul class="song-list" id="favList"></ul>
+      </div>
+
+      <div class="list-section" id="historySection" hidden>
+        <div class="list-head">
+          <h2>🕘 최근 본 곡</h2>
+          <button class="text-btn" id="clearHistory">전체 삭제</button>
+        </div>
+        <ul class="song-list" id="historyList"></ul>
+      </div>
+    </section>
+
+    <!-- 확인 화면 -->
+    <section class="screen" id="screen-confirm">
+      <div class="confirm-card" id="confirmCard"></div>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section class="screen" id="screen-result">
+      <div id="resultContent"></div>
+    </section>
+
+    <!-- 스크랩북 (플레이리스트 목록) -->
+    <section class="screen" id="screen-scrapbook">
+      <form class="search-box" id="newPlaylistForm">
+        <label class="field">
+          <span>새 플레이리스트 만들기</span>
+          <input type="text" id="newPlaylistName" placeholder="예: 버스킹 준비" autocomplete="off" />
+        </label>
+        <button type="submit" class="primary-btn">만들기</button>
+      </form>
+      <div class="list-section">
+        <h2>📔 내 플레이리스트</h2>
+        <ul class="song-list" id="playlistList"></ul>
+      </div>
+    </section>
+
+    <!-- 플레이리스트 내부 (곡 목록) -->
+    <section class="screen" id="screen-playlist">
+      <div id="playlistContent"></div>
+    </section>
+
+    <!-- 설정 화면 -->
+    <section class="screen" id="screen-settings">
+      <div class="settings">
+        <label class="field">
+          <span>Anthropic API 키</span>
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" />
+          <small>브라우저에만 저장되며 외부로 전송되지 않습니다(Anthropic API 호출 제외).</small>
+        </label>
+        <label class="field">
+          <span>모델</span>
+          <select id="modelSelect">
+            <option value="claude-sonnet-4-6">Sonnet 4.6 (추천·균형)</option>
+            <option value="claude-haiku-4-5">Haiku 4.5 (가장 빠름·식별 약함)</option>
+            <option value="claude-opus-4-6">Opus 4.6 (정확하나 느림)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>편곡 정확도</span>
+          <select id="qualitySelect">
+            <option value="accuracy">정확도 우선 (느림·검색 많이)</option>
+            <option value="balanced">균형 (기본)</option>
+            <option value="speed">속도 우선 (빠름·검색 적게)</option>
+          </select>
+          <small>정확도 우선은 검색을 더 많이 하고 더 깊이 편곡해요. 그만큼 느려요.</small>
+        </label>
+        <button class="primary-btn" id="saveSettings">저장</button>
+        <p class="hint">API 키는 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> 에서 발급할 수 있어요.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 로딩 오버레이 -->
+  <div class="overlay" id="overlay" hidden>
+    <div class="spinner"></div>
+    <p id="overlayText">불러오는 중…</p>
+    <button class="cancel-btn" id="overlayCancel">취소</button>
+  </div>
+
+  <!-- 스크랩북 담기 시트 -->
+  <div class="sheet-modal" id="saveSheet" hidden>
+    <div class="sheet-panel">
+      <h3>📔 스크랩북에 담기</h3>
+      <p class="sheet-song" id="saveSheetSong"></p>
+      <ul class="song-list" id="savePickList"></ul>
+      <form class="pick-new" id="savePickNewForm">
+        <input type="text" id="savePickNewName" placeholder="새 플레이리스트 이름" autocomplete="off" />
+        <button type="submit">+ 추가</button>
+      </form>
+      <button class="sheet-close" id="saveSheetClose">닫기</button>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="chords.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+</html>
