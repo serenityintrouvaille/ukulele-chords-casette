@@ -76,7 +76,7 @@ const UkeEngine = (function () {
   const STRINGS_PC = [7, 0, 4, 9]; // G C E A
   const MAX_FRET = 12;
 
-  function scoreVoicing(frets, parsed, toneSet) {
+  function scoreVoicing(frets, parsed) {
     const played = [];
     frets.forEach((f, i) => { if (f >= 0) played.push((STRINGS_PC[i] + f) % 12); });
     const fretted = frets.filter((f) => f > 0);
@@ -121,7 +121,7 @@ const UkeEngine = (function () {
       if (!ok || played.length < 3) continue;
       for (const ess of essential) if (!played.includes(ess)) { ok = false; break; }
       if (!ok) continue;
-      const sc = scoreVoicing(frets, parsed, toneSet);
+      const sc = scoreVoicing(frets, parsed);
       if (sc < bestScore) { bestScore = sc; best = frets; }
     }
     if (!best) best = [0, 0, 0, 0];
