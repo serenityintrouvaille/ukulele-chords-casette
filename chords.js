@@ -5,19 +5,6 @@
  * 여기서는 그리기만 한다(코드 DB 불필요).
  */
 window.UkeChord = (function () {
-  // 표준 우쿨렐레 운지(GCEA). AI가 운지를 빠뜨리거나 형식이 깨졌을 때만 안전망으로 사용.
-  const STANDARD = {
-    "C": [0,0,0,3], "C7": [0,0,0,1], "Cmaj7": [0,0,0,2], "Cm": [0,3,3,3], "Cm7": [3,3,3,3],
-    "D": [2,2,2,0], "D7": [2,2,2,3], "Dm": [2,2,1,0], "Dm7": [2,2,1,3],
-    "E": [4,4,4,2], "E7": [1,2,0,2], "Em": [0,4,3,2], "Em7": [0,2,0,2],
-    "F": [2,0,1,0], "F7": [2,3,1,3], "Fm": [1,0,1,3], "Fm7": [1,3,1,3], "Fmaj7": [2,4,1,3],
-    "G": [0,2,3,2], "G7": [0,2,1,2], "Gm": [0,2,3,1], "Gmaj7": [0,2,2,2],
-    "A": [2,1,0,0], "A7": [0,1,0,0], "Am": [2,0,0,0], "Am7": [0,0,0,0], "Amaj7": [1,1,0,0],
-    "B": [4,3,2,2], "B7": [2,3,2,2], "Bm": [4,2,2,2], "Bm7": [2,2,2,2],
-    "Bb": [3,2,1,1], "Bbm": [3,1,1,1], "Bb7": [1,2,1,1],
-    "Eb": [0,3,3,1], "Ab": [5,3,4,3],
-  };
-
   function validFrets(f) {
     return Array.isArray(f) && f.length === 4 &&
       f.every((n) => Number.isInteger(n) && n >= -1 && n <= 15);
@@ -31,14 +18,12 @@ window.UkeChord = (function () {
   const PAD_BOTTOM = 8;
 
   function render(name, frets) {
-    // 알려진 코드는 검증된 표준 운지를 우선(AI 운지가 가끔 틀림).
-    // 표준에 없는 코드만 AI 운지 사용, 그것도 깨졌으면 개방현.
     const key = name ? name.trim() : "";
-    if (STANDARD[key]) {
-      frets = STANDARD[key];
-    } else if (!validFrets(frets)) {
-      frets = [0, 0, 0, 0];
+    // 엔진이 있으면 엔진 운지를 최우선 사용(결정론·정확)
+    if (window.UkeEngine && key) {
+      try { frets = window.UkeEngine.voicing(key).frets; } catch (_) {}
     }
+    if (!validFrets(frets)) frets = [0, 0, 0, 0];
     const played = frets.filter((f) => f > 0);
     const minFret = played.length ? Math.min(...played) : 1;
     const maxFret = played.length ? Math.max(...played) : 1;
