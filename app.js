@@ -552,6 +552,10 @@
 
   function makeSongItem(song, opts) {
     const li = document.createElement("li"); li.className = "song-item";
+    if (song.artworkUrl) {
+      const img = document.createElement("img"); img.className = "thumb";
+      img.src = song.artworkUrl; img.alt = ""; li.appendChild(img);
+    }
     const meta = document.createElement("div"); meta.className = "meta";
     const t = document.createElement("div"); t.className = "t"; t.textContent = song.title;
     const a = document.createElement("div"); a.className = "a"; a.textContent = song.artist;
@@ -610,7 +614,7 @@
     const pl = pls.find((p) => p.id === playlistId);
     if (!pl) return false;
     if (pl.songs.some((s) => sameSong(s, song))) return "dup";
-    pl.songs.unshift({ title: song.title, artist: song.artist, savedAt: nowIso() });
+    pl.songs.unshift({ title: song.title, artist: song.artist, album: song.album || "", artworkUrl: song.artworkUrl || "", savedAt: nowIso() });
     savePlaylists(pls);
     return true;
   }
@@ -631,6 +635,8 @@
     }
     pls.forEach((pl) => {
       const li = document.createElement("li"); li.className = "song-item";
+      const firstArt = (pl.songs.find((s) => s.artworkUrl) || {}).artworkUrl;
+      if (firstArt) { const img = document.createElement("img"); img.className = "thumb"; img.src = firstArt; li.insertBefore(img, li.firstChild); }
       const meta = document.createElement("div"); meta.className = "meta";
       const t = document.createElement("div"); t.className = "t"; t.textContent = pl.name;
       const sub = document.createElement("div"); sub.className = "sub";
