@@ -5,6 +5,36 @@ const UkeEngine = (function () {
   const NOTE_PC = { C:0, "C#":1, Db:1, D:2, "D#":3, Eb:3, E:4, F:5, "F#":6, Gb:6,
     G:7, "G#":8, Ab:8, A:9, "A#":10, Bb:10, B:11, "Cb":11, "E#":5, "B#":0 };
 
+  // quality → 루트로부터의 반음 인터벌
+  const FORMULA = {
+    maj:[0,4,7], m:[0,3,7], dim:[0,3,6], aug:[0,4,8],
+    sus2:[0,2,7], sus4:[0,5,7],
+    "6":[0,4,7,9], m6:[0,3,7,9],
+    "7":[0,4,7,10], maj7:[0,4,7,11], m7:[0,3,7,10],
+    m7b5:[0,3,6,10], dim7:[0,3,6,9],
+    add9:[0,4,7,2], "9":[0,4,7,10,2], m9:[0,3,7,10,2], maj9:[0,4,7,11,2],
+  };
+  function chordTones(parsed) {
+    const f = FORMULA[parsed.quality] || FORMULA.maj;
+    return [...new Set(f.map((iv) => (parsed.root + iv) % 12))];
+  }
+  // 보이싱이 반드시 포함해야 할 음(루트·3도/서스·필요시 7도)
+  function essentialTones(parsed) {
+    const r = parsed.root, q = parsed.quality;
+    const out = [r];
+    const third = q.startsWith("m") || q === "dim" || q === "dim7" || q === "m7b5"
+      ? (r + 3) % 12
+      : q === "sus2" ? (r + 2) % 12
+      : q === "sus4" ? (r + 5) % 12
+      : (r + 4) % 12;
+    out.push(third);
+    if (/7/.test(q)) {
+      const sev = q === "maj7" ? 11 : (q === "dim7" ? 9 : 10);
+      out.push((r + sev) % 12);
+    }
+    return [...new Set(out)];
+  }
+
   // 품질 문자열 정규화: 입력 꼬리표 → 표준 quality 키
   function normQuality(s) {
     const t = (s || "").trim();
@@ -41,7 +71,7 @@ const UkeEngine = (function () {
     return { root, quality, bass, raw };
   }
 
-  return { parseChord, NOTE_PC };
+  return { parseChord, NOTE_PC, chordTones, essentialTones };
 })();
 
 if (typeof window !== "undefined") window.UkeEngine = UkeEngine;

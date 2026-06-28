@@ -17,3 +17,19 @@ test("parseChord: 샤프 루트 m7b5", () => {
   const p = UkeEngine.parseChord("F#m7b5");
   assert.equal(p.root, 6); assert.equal(p.quality, "m7b5");
 });
+test("chordTones: C major = C E G", () => {
+  assert.deepEqual(UkeEngine.chordTones(UkeEngine.parseChord("C")).sort((a,b)=>a-b), [0,4,7]);
+});
+test("chordTones: Am7 = A C E G", () => {
+  assert.deepEqual(UkeEngine.chordTones(UkeEngine.parseChord("Am7")).sort((a,b)=>a-b), [0,4,7,9]);
+});
+test("chordTones: Cmaj7 = C E G B", () => {
+  assert.deepEqual(UkeEngine.chordTones(UkeEngine.parseChord("Cmaj7")).sort((a,b)=>a-b), [0,4,7,11]);
+});
+test("chordTones: G7 = G B D F", () => {
+  assert.deepEqual(UkeEngine.chordTones(UkeEngine.parseChord("G7")).sort((a,b)=>a-b), [2,5,7,11]);
+});
+test("essentialTones: 7화음은 루트·3도·7도", () => {
+  const p = UkeEngine.parseChord("G7");
+  assert.deepEqual(UkeEngine.essentialTones(p).sort((a,b)=>a-b), [5,7,11]); // G, B, F
+});
