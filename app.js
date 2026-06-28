@@ -304,6 +304,22 @@
       const ex = document.createElement("div"); ex.className = "song-extra"; ex.textContent = extraText;
       card.appendChild(ex);
     }
+    // iTunes 표지/앨범 (실패해도 무시)
+    if (window.UkeITunes) {
+      UkeITunes.lookupSong(song.artist, song.title).then((info) => {
+        if (!info) return;
+        if (info.artworkUrl) {
+          const img = document.createElement("img");
+          img.className = "cover"; img.src = info.artworkUrl; img.alt = "album cover";
+          card.insertBefore(img, card.firstChild);
+        }
+        if (info.album) {
+          const al = document.createElement("div"); al.className = "song-extra"; al.textContent = info.album;
+          card.appendChild(al);
+        }
+        song.album = info.album; song.artworkUrl = info.artworkUrl;
+      });
+    }
     const actions = document.createElement("div"); actions.className = "confirm-actions";
     const back = document.createElement("button"); back.className = "btn-secondary"; back.textContent = "다시 검색";
     back.onclick = () => showScreen("search");
@@ -323,7 +339,8 @@
         showScreen("search");
         return;
       }
-      addHistory({ title: data.title || song.title, artist: data.artist || song.artist });
+      addHistory({ title: data.title || song.title, artist: data.artist || song.artist,
+                   album: data.album || song.album, artworkUrl: song.artworkUrl });
       renderResult(data);
       showScreen("result");
     } catch (err) {
@@ -486,7 +503,7 @@
   function addHistory(song) {
     let h = load(LS.history, []);
     h = h.filter((s) => !sameSong(s, song));
-    h.unshift({ title: song.title, artist: song.artist });
+    h.unshift({ title: song.title, artist: song.artist, album: song.album || "", artworkUrl: song.artworkUrl || "" });
     if (h.length > MAX_HISTORY) h = h.slice(0, MAX_HISTORY);
     store(LS.history, h);
   }
